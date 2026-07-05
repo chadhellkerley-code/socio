@@ -1,18 +1,19 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import axios from 'axios';
 import { BaseLLM } from './BaseLLM';
 import { Message, LLMResponse } from '../types';
 import { config } from '../config';
 
 export class GeminiProvider extends BaseLLM {
-  private genAI: GoogleGenerativeAI;
+  private apiKey: string;
+  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 
   constructor() {
     super();
-    this.genAI = new GoogleGenerativeAI(config.geminiApiKey);
+    this.apiKey = config.geminiApiKey;
   }
 
   async generateResponse(messages: Message[], context?: string): Promise<LLMResponse> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const url = `${this.baseUrl}/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
     
     const systemPrompt = `Eres Brain, un sistema de memoria personal. 
     Tu conocimiento actual basado en memorias pasadas es:
@@ -20,40 +21,58 @@ export class GeminiProvider extends BaseLLM {
     
     Responde al usuario de forma natural, utilizando este contexto si es útil.`;
 
-    const chat = model.startChat({
-      history: messages.slice(0, -1).map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      })),
-      generationConfig: {
-        maxOutputTokens: 1000,
+    const contents = [
+      {
+        role: 'user',
+        parts: [{ text: systemPrompt }]
       },
-    });
+      ...messages.map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }))
+    ];
 
-    const lastMessage = messages[messages.length - 1].content;
-    const fullPrompt = `${systemPrompt}\n\nUsuario: ${lastMessage}`;
-    
-    const result = await chat.sendMessage(fullPrompt);
-    const response = await result.response;
-    return { content: response.text() };
+    try {
+      const response = await axios.post(url, { contents });
+      const text = response.data.candidates[0].content.parts[0].text;
+      return { content: text };
+    } catch (error: any) {
+      console.error('Error en Gemini REST API:', error.response?.data || error.message);
+      throw error;
+    }
   }
 
   async generateEmbeddings(text: string): Promise<number[]> {
-    const model = this.genAI.getGenerativeModel({ model: "text-embedding-004" });
-    const result = await model.embedContent(text);
-    return result.embedding.values;
+    const url = `${this.baseUrl}/text-embedding-004:embedContent?key=${this.apiKey}`;
+    
+    try {
+      const response = await axios.post(url, {
+        model: "models/text-embedding-004",
+        content: { parts: [{ text }] }
+      });
+      return response.data.embedding.values;
+    } catch (error: any) {
+      console.error('Error en Gemini Embedding API:', error.response?.data || error.message);
+      return new Array(768).fill(0); // Fallback
+    }
   }
 
   async classifyMemory(content: string): Promise<boolean> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const url = `${this.baseUrl}/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
     const prompt = `Analiza el siguiente mensaje y decide si contiene información importante que deba guardarse en la memoria a largo plazo (decisiones, ideas, aprendizajes, procesos, etc.). 
     Responde únicamente con la palabra "YES" o "NO".
     
     Mensaje: "${content}"`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim().toUpperCase();
-    return text.includes('YES');
+    try {
+      const response = await axios.post(url, {
+        contents: [{ parts: [{ text: prompt }] }]
+      });
+      const text = response.data.candidates[0].content.parts[0].text.trim().toUpperCase();
+      return text.includes('YES');
+    } catch (error: any) {
+      console.error('Error en Gemini Classification API:', error.response?.data || error.message);
+      return false;
+    }
   }
 }
