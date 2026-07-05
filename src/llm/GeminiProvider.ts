@@ -15,35 +15,34 @@ export class GeminiProvider extends BaseLLM {
   async generateResponse(messages: Message[], context?: string): Promise<LLMResponse> {
     const url = `${this.baseUrl}/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
     
+    const lastMessage = messages[messages.length - 1].content;
     const systemPrompt = `Eres Brain, un sistema de memoria personal. 
     Tu conocimiento actual basado en memorias pasadas es:
     ${context || 'No hay memorias previas relevantes.'}
     
     Responde al usuario de forma natural, utilizando este contexto si es útil.`;
 
-    // Google Gemini API v1beta requiere alternancia estricta User/Model
-    const history = [];
-    
-    // El primer mensaje siempre debe ser del usuario y puede contener el system prompt
-    const firstUserMessage = messages.find(m => m.role === 'user');
-    const lastUserMessage = messages[messages.length - 1];
-
-    history.push({
-      role: 'user',
-      parts: [{ text: `${systemPrompt}\n\nUsuario dice: ${lastUserMessage.content}` }]
-    });
+    // Estructura simplificada al máximo: un solo mensaje de usuario con todo el contexto
+    const payload = {
+      contents: [{
+        parts: [{
+          text: `${systemPrompt}\n\nPregunta del usuario: ${lastMessage}`
+        }]
+      }]
+    };
 
     try {
-      const response = await axios.post(url, { contents: history });
+      const response = await axios.post(url, payload);
       if (response.data.candidates && response.data.candidates[0].content) {
-        const text = response.data.candidates[0].content.parts[0].text;
-        return { content: text };
+        return { content: response.data.candidates[0].content.parts[0].text };
       } else {
-        throw new Error('Respuesta de Gemini vacía o malformada');
+        console.error('Respuesta inesperada de Gemini:', JSON.stringify(response.data));
+        throw new Error('Respuesta de Gemini malformada');
       }
     } catch (error: any) {
-      console.error('Error en Gemini REST API:', error.response?.data || error.message);
-      throw error;
+      const errorMsg = error.response?.data?.error?.message || error.message;
+      console.error('Error en Gemini REST API:', errorMsg);
+      throw new Error(`Gemini Error: ${errorMsg}`);
     }
   }
 
@@ -70,7 +69,7 @@ export class GeminiProvider extends BaseLLM {
 
     try {
       const response = await axios.post(url, {
-        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        contents: [{ parts: [{ text: prompt }] }]
       });
       const text = response.data.candidates[0].content.parts[0].text.trim().toUpperCase();
       return text.includes('YES');
