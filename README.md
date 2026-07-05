@@ -22,8 +22,8 @@ Telegram → Webhook → Brain API → Memory Engine → Gemini API → Telegram
 
 El **Memory Engine** es el corazón del sistema y se compone de los siguientes módulos:
 
--   **Memoria Corta**: Almacena conversaciones recientes, temas actuales y tareas temporales. Implementada con SQLite y con una expiración configurable (por defecto, 30 días).
--   **Memoria Larga**: Contiene el conocimiento permanente, almacenado en un **Obsidian Vault** utilizando archivos Markdown. Cada nota de memoria larga sigue un formato específico y se organiza en carpetas temáticas.
+-   **Memoria Corta**: Almacena conversaciones recientes, temas actuales y tareas temporales. Implementada con Supabase (PostgreSQL).
+-   **Memoria Larga**: Contiene el conocimiento permanente, almacenado en un **Obsidian Vault** utilizando archivos Markdown. Cada nota de memoria larga sigue un formato específico y se organiza en carpetas temáticas, almacenadas en Supabase Storage.
 -   **Embedding Index**: Índice de embeddings generados a partir de las notas de memoria larga, utilizado para la búsqueda semántica.
 -   **Search Engine**: Motor de búsqueda que utiliza los embeddings para recuperar las notas más relevantes antes de responder a una consulta.
 
@@ -38,12 +38,12 @@ El **Memory Engine** es el corazón del sistema y se compone de los siguientes m
 -   **Propósito**: Mantener la continuidad de la conversación y el contexto temporal.
 -   **Almacenamiento**: Conversaciones recientes, temas actuales, tareas temporales, contexto reciente.
 -   **Expiración**: 30 días (configurable mediante variable de entorno `SHORT_MEMORY_EXPIRATION`).
--   **Implementación**: SQLite.
+-   **Implementación**: Supabase (PostgreSQL).
 
 ### Memoria Larga
 
 -   **Propósito**: Almacenar conocimiento permanente y estructurado.
--   **Almacenamiento**: Dentro de un Obsidian Vault, donde cada memoria es un archivo Markdown.
+-   **Almacenamiento**: Dentro de un Obsidian Vault, donde cada memoria es un archivo Markdown, almacenado en Supabase Storage.
 -   **Ejemplos de Contenido**: Estrategias de negocio, decisiones de CRM, automatizaciones, ideas, lecciones, errores, procesos, experimentos, prompts, arquitectura.
 -   **Regla Clave**: Nunca guardar conversaciones inútiles.
 
@@ -51,7 +51,7 @@ El **Memory Engine** es el corazón del sistema y se compone de los siguientes m
 
 Para cada mensaje recibido, el sistema decide si debe convertirse en conocimiento permanente. Si la decisión es YES, se genera o actualiza un archivo Markdown. Si es NO, se responde normalmente.
 
-### Obsidian Vault
+### Obsidian Vault (en Supabase Storage)
 
 -   **Estructura del Vault**:
     ```
@@ -139,50 +139,72 @@ El proveedor de LLM está abstraído, permitiendo cambiar entre Gemini (actual),
 
 ## Estado Actual del Proyecto
 
-El proyecto **Brain** ha sido inicializado y se ha implementado el núcleo de la funcionalidad, incluyendo:
+El proyecto **Brain** ha sido migrado para ser compatible con Vercel y Supabase, incluyendo:
 
--   **Arquitectura**: Definida y documentada con diagramas.
--   **Estructura de Carpetas**: Creada y organizada.
--   **Configuración**: Módulo de configuración basado en variables de entorno.
--   **Tipos e Interfaces**: Definidos para una mayor claridad y robustez del código.
--   **Abstracción de LLM**: Implementada la interfaz `BaseLLM` y el proveedor `GeminiProvider` con integración simulada.
--   **Memoria Corta**: Implementada con SQLite.
--   **Memoria Larga**: Implementada con gestión de Obsidian Vault en Markdown.
--   **Motor de Búsqueda**: Implementación básica con similitud de coseno para embeddings.
--   **Bot de Telegram**: Integración inicial con `telegraf` para manejo de texto y voz (con transcripción simulada).
--   **API Express**: Servidor API para webhook de Telegram y health check.
--   **Scripts**: `npm install`, `npm run build`, `npm run dev` y `npm run test-engine` disponibles.
+-   **Memoria Corta**: Refactorizada para usar Supabase (PostgreSQL).
+-   **Memoria Larga**: Refactorizada para usar Supabase Storage.
+-   **Telegram**: Adaptado para funcionar con Webhooks.
+-   **Vercel**: Archivo `vercel.json` añadido para configuración de despliegue.
 
-## Próximos Pasos (Validación y Estabilización del Núcleo)
+## Guía de Despliegue en Vercel con Supabase
 
-Para asegurar la funcionalidad y robustez del proyecto, se recomienda seguir los siguientes pasos:
+Sigue estos pasos para desplegar tu proyecto Brain en Vercel y usar Supabase para la persistencia de datos:
 
-1.  **Revisar el Código Implementado**: Aunque se ha generado el proyecto, es crucial una revisión manual para asegurar que el código cumple con los requisitos y las mejores prácticas.
-2.  **Configurar el Archivo `.env`**: Crear un archivo `.env` basado en `.env.example` y rellenar con los tokens y claves de API (`TELEGRAM_TOKEN`, `GEMINI_API_KEY`).
-3.  **Crear la API Key de Gemini**: Obtener una clave de API válida para Google Gemini.
-4.  **Levantar el Proyecto Localmente**:
-    ```bash
-    npm install
-    npm run dev
-    ```
-5.  **Verificar Componentes Clave**:
-    -   **Telegram**: Asegurar que el bot responde a mensajes de texto y voz.
-    -   **Gemini**: Confirmar que la integración con la API de Gemini funciona correctamente para generación de respuestas, embeddings y clasificación.
-    -   **Obsidian**: Verificar que las notas se guardan y actualizan correctamente en el Vault.
-    -   **SQLite**: Comprobar que la memoria corta persiste y expira según lo configurado.
-    -   **Embeddings**: Validar que los embeddings se generan y utilizan para la búsqueda semántica.
-6.  **Publicar el Brain**: Una vez que el núcleo esté estable y funcionando localmente, proceder con el despliegue en un entorno 24/7.
+### 1. Configuración en Supabase
 
-## Roadmap v2 (Funcionalidades Futuras)
+Antes de desplegar en Vercel, necesitas configurar tu proyecto en Supabase:
 
-Una vez que la versión 1 sea estable, se pueden considerar las siguientes mejoras:
+1.  **Crea un Proyecto en Supabase**: Si aún no lo has hecho, ve a [Supabase](https://supabase.com/) y crea una cuenta gratuita y un nuevo proyecto.
 
--   **Memoria de Personas**: Recordar información específica sobre individuos (clientes, contactos, etc.).
--   **Tareas Inteligentes**: Extracción automática de acciones pendientes de las conversaciones.
--   **Recordatorios Proactivos**: Sugerencias basadas en el historial de decisiones y tareas.
--   **Dashboard Web**: Interfaz web para explorar y gestionar el conocimiento almacenado.
--   **Integración con CRM**: Conexión con sistemas CRM para enriquecer el contexto de las conversaciones.
--   **Múltiples Proveedores de IA**: Soporte para cambiar entre diferentes LLMs (OpenAI, Claude, Grok) mediante configuración.
--   **Búsqueda Híbrida**: Combinar búsqueda por embeddings y palabras clave para una recuperación de información más precisa.
+2.  **Crea la Tabla `messages` (para Memoria Corta)**:
+    *   En el dashboard de tu proyecto Supabase, ve a **Table Editor**.
+    *   Haz clic en `New table`.
+    *   Nombra la tabla `messages`.
+    *   Añade las siguientes columnas:
+        *   `id`: `TEXT`, `Primary Key`, `Not Null`
+        *   `role`: `TEXT`, `Not Null`
+        *   `content`: `TEXT`, `Not Null`
+        *   `timestamp`: `TIMESTAMP WITH TIME ZONE`, `Not Null`, `Default: now()`
+    *   Asegúrate de que los permisos de `RLS` (Row Level Security) permitan `INSERT`, `SELECT`, `UPDATE`, `DELETE` para el rol `service_role` (esto es importante para que tu aplicación pueda interactuar con la tabla).
 
-**Recomendación**: Es fundamental estabilizar el núcleo del proyecto ("hablar → guardar → recuperar → responder") antes de avanzar con funcionalidades adicionales. La fiabilidad de este ciclo es la base para todas las futuras mejoras.
+3.  **Crea el Bucket `brain-vault` (para Memoria Larga)**:
+    *   En el dashboard de tu proyecto Supabase, ve a **Storage**.
+    *   Haz clic en `New bucket`.
+    *   Nombra el bucket `brain-vault`.
+    *   Asegúrate de que los permisos de `RLS` permitan `UPLOAD`, `DOWNLOAD`, `UPDATE`, `DELETE` para el rol `service_role`.
+
+4.  **Obtén tus Credenciales de Supabase**:
+    *   En el dashboard de tu proyecto Supabase, ve a **Project Settings** (icono de engranaje) -> **API**.
+    *   Copia los valores de:
+        *   `URL` (será tu `SUPABASE_URL`)
+        *   `Service Role (secret)` (será tu `SUPABASE_SERVICE_ROLE_KEY`)
+
+### 2. Despliegue en Vercel
+
+Ahora que tu proyecto Supabase está listo, puedes desplegar Brain en Vercel:
+
+1.  **Conecta tu Repositorio de GitHub**: Ve a [Vercel](https://vercel.com/) y crea un nuevo proyecto. Conecta tu repositorio de GitHub (`https://github.com/chadhellkerley-code/socio`).
+
+2.  **Configura las Variables de Entorno en Vercel**:
+    *   Durante el proceso de despliegue en Vercel, o yendo a **Project Settings** -> **Environment Variables** de tu proyecto, añade las siguientes variables:
+        *   `TELEGRAM_TOKEN`: Tu token de bot de Telegram.
+        *   `GEMINI_API_KEY`: Tu clave de API de Google Gemini.
+        *   `SUPABASE_URL`: La URL de tu proyecto Supabase (obtenida en el paso 1.4).
+        *   `SUPABASE_SERVICE_ROLE_KEY`: La clave secreta de rol de servicio de Supabase (obtenida en el paso 1.4).
+        *   `WEBHOOK_URL`: La URL de tu despliegue en Vercel, seguida de `/api/webhook`. Por ejemplo, si tu dominio de Vercel es `https://brain-ai.vercel.app`, entonces `WEBHOOK_URL` sería `https://brain-ai.vercel.app/api/webhook`.
+        *   `SHORT_MEMORY_EXPIRATION`: `30` (o el número de días que desees).
+        *   `LLM_PROVIDER`: `gemini`.
+        *   `PORT`: `3000` (aunque Vercel lo gestiona, es bueno tenerlo).
+
+3.  **Despliega el Proyecto**: Vercel detectará el archivo `vercel.json` y el código TypeScript. Inicia el despliegue. Una vez completado, Vercel te proporcionará una URL pública para tu aplicación.
+
+### 3. Configura el Webhook de Telegram
+
+Finalmente, debes decirle a Telegram dónde enviar los mensajes de tu bot:
+
+1.  **Abre Telegram** y busca a `@BotFather`.
+2.  Usa el comando `/setwebhook`.
+3.  Selecciona tu bot.
+4.  Cuando te pida la URL, introduce la `WEBHOOK_URL` que configuraste en Vercel (ej. `https://brain-ai.vercel.app/api/webhook`).
+
+¡Y listo! Tu bot Brain debería estar funcionando 24/7 en Vercel, usando Supabase para su memoria. Ahora puedes probarlo enviando mensajes a tu bot de Telegram.
