@@ -13,7 +13,6 @@ async function main() {
   // 1. Inicializar componentes
   const shortMemory = new ShortMemory();
   await shortMemory.init();
-  console.log('✅ Memoria corta (SQLite) inicializada.');
 
   const longMemory = new LongMemory();
   const llm = new GeminiProvider();
@@ -28,16 +27,15 @@ async function main() {
 
   const bot = new TelegramBot(memoryEngine);
   await bot.launch();
-  console.log('✅ Bot de Telegram listo.');
 
   // 2. Iniciar servidor API (para Webhooks y salud)
   const app = createServer(bot);
-  app.listen(config.port, () => {
-    console.log(`✅ Brain API escuchando en el puerto ${config.port}`);
-  });
+  return app;
 }
 
-main().catch(err => {
-  console.error('❌ Error fatal al iniciar el proyecto:', err);
-  process.exit(1);
-});
+const appPromise = main();
+
+export default async (req: any, res: any) => {
+  const app = await appPromise;
+  app(req, res);
+};

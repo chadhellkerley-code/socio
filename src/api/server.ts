@@ -1,23 +1,28 @@
 import express from 'express';
 import { TelegramBot } from '../telegram/TelegramBot';
-import { config } from '../config';
 
 export function createServer(bot: TelegramBot) {
   const app = express();
   app.use(express.json());
 
-  app.post('/webhook/telegram', async (req, res) => {
+  // Vercel usará esta ruta para el webhook de Telegram
+  app.post('/api/webhook', async (req, res) => {
     try {
       await bot.handleUpdate(req.body);
-      res.sendStatus(200);
+      res.status(200).send('OK');
     } catch (error) {
       console.error('Error handling Telegram update:', error);
-      res.sendStatus(500);
+      res.status(500).send('Internal Server Error');
     }
   });
 
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok', project: 'Brain' });
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', project: 'Brain', platform: 'Vercel' });
+  });
+
+  // Ruta por defecto
+  app.get('/', (req, res) => {
+    res.send('Brain AI is running on Vercel.');
   });
 
   return app;

@@ -10,6 +10,8 @@ export const config = {
   shortMemoryExpirationDays: parseInt(process.env.SHORT_MEMORY_EXPIRATION || '30'),
   llmProvider: process.env.LLM_PROVIDER || 'gemini',
   port: parseInt(process.env.PORT || '3000'),
+  supabaseUrl: process.env.SUPABASE_URL || '',
+  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
 };
 
 if (!config.telegramToken || !config.geminiApiKey) {

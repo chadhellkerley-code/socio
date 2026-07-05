@@ -1,45 +1,65 @@
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Message } from '../types';
 import { config } from '../config';
 
 export class ShortMemory {
-  private db?: Database;
+  private supabase: SupabaseClient;
+
+  constructor() {
+    this.supabase = createClient(config.supabaseUrl, config.supabaseKey);
+  }
 
   async init() {
-    this.db = await open({
-      filename: config.sqlitePath,
-      driver: sqlite3.Database
-    });
-
-    await this.db.exec(`
-      CREATE TABLE IF NOT EXISTS messages (
-        id TEXT PRIMARY KEY,
-        role TEXT,
-        content TEXT,
-        timestamp INTEGER
-      )
-    `);
+    // En Supabase, las tablas se crean manualmente o vía SQL en el dashboard.
+    // Asumimos que la tabla 'messages' existe.
+    console.log('Conectado a Supabase para memoria corta.');
   }
 
   async addMessage(message: Message) {
-    await this.db?.run(
-      'INSERT INTO messages (id, role, content, timestamp) VALUES (?, ?, ?, ?)',
-      [message.id, message.role, message.content, message.timestamp]
-    );
+    const { error } = await this.supabase
+      .from('messages')
+      .insert([{
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        timestamp: new Date(message.timestamp).toISOString()
+      }]);
+
+    if (error) {
+      console.error('Error al guardar mensaje en Supabase:', error);
+    }
     await this.cleanup();
   }
 
   async getRecentMessages(limit: number = 20): Promise<Message[]> {
-    const rows = await this.db?.all<Message[]>(
-      'SELECT * FROM messages ORDER BY timestamp DESC LIMIT ?',
-      [limit]
-    );
-    return rows?.reverse() || [];
+    const { data, error } = await this.supabase
+      .from('messages')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error al obtener mensajes de Supabase:', error);
+      return [];
+    }
+
+    return (data || []).reverse().map(row => ({
+      id: row.id,
+      role: row.role,
+      content: row.content,
+      timestamp: new Date(row.timestamp).getTime()
+    }));
   }
 
   private async cleanup() {
-    const expirationDate = Date.now() - config.shortMemoryExpirationDays * 24 * 60 * 60 * 1000;
-    await this.db?.run('DELETE FROM messages WHERE timestamp < ?', [expirationDate]);
+    const expirationDate = new Date(Date.now() - config.shortMemoryExpirationDays * 24 * 60 * 60 * 1000).toISOString();
+    const { error } = await this.supabase
+      .from('messages')
+      .delete()
+      .lt('timestamp', expirationDate);
+
+    if (error) {
+      console.error('Error en cleanup de Supabase:', error);
+    }
   }
 }

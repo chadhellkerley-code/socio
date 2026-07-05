@@ -1,24 +1,29 @@
-import fs from 'fs/promises';
-import path from 'path';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { LongMemoryNote } from '../types';
 import { config } from '../config';
 
 export class LongMemory {
-  private vaultPath: string;
+  private supabase: SupabaseClient;
+  private bucketName = 'brain-vault';
 
   constructor() {
-    this.vaultPath = config.obsidianVaultPath;
+    this.supabase = createClient(config.supabaseUrl, config.supabaseKey);
   }
 
   async saveNote(folder: string, note: LongMemoryNote) {
-    const folderPath = path.join(this.vaultPath, folder);
-    await fs.mkdir(folderPath, { recursive: true });
-
-    const fileName = `${note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-    const filePath = path.join(folderPath, fileName);
-
+    const fileName = `${folder}/${note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
     const content = this.formatMarkdown(note);
-    await fs.writeFile(filePath, content, 'utf8');
+
+    const { error } = await this.supabase.storage
+      .from(this.bucketName)
+      .upload(fileName, content, {
+        contentType: 'text/markdown',
+        upsert: true
+      });
+
+    if (error) {
+      console.error('Error al guardar nota en Supabase Storage:', error);
+    }
   }
 
   private formatMarkdown(note: LongMemoryNote): string {
@@ -47,10 +52,5 @@ ${note.relatedNotes.map(n => `[[${n}]]`).join(', ')}
 ## Next Steps
 ${note.nextSteps.map(s => `- ${s}`).join('\n')}
 `;
-  }
-
-  async searchNotes(query: string): Promise<string[]> {
-    // Aquí se integrará con el motor de búsqueda semántica
-    return [];
   }
 }
