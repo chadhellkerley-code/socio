@@ -1,28 +1,50 @@
+import { Telegraf } from 'telegraf';
 import { MemoryEngine } from '../memory/MemoryEngine';
 import { config } from '../config';
 
 export class TelegramBot {
-  constructor(private memoryEngine: MemoryEngine) {}
+  private bot: Telegraf;
 
-  async handleUpdate(update: any) {
-    if (update.message) {
-      const chatId = update.message.chat.id;
-      
-      if (update.message.text) {
-        const response = await this.memoryEngine.processMessage(update.message.text);
-        await this.sendMessage(chatId, response);
-      } else if (update.message.voice) {
-        // Lógica para procesar voz
-        console.log('Procesando mensaje de voz...');
-        const transcript = "Transcripción simulada de voz";
-        const response = await this.memoryEngine.processMessage(transcript);
-        await this.sendMessage(chatId, response);
-      }
-    }
+  constructor(private memoryEngine: MemoryEngine) {
+    this.bot = new Telegraf(config.telegramToken);
+    this.setupHandlers();
   }
 
-  private async sendMessage(chatId: number, text: string) {
-    // Llamada a la API de Telegram para enviar mensaje
-    console.log(`Enviando mensaje a ${chatId}: ${text}`);
+  private setupHandlers() {
+    this.bot.on('text', async (ctx) => {
+      try {
+        const response = await this.memoryEngine.processMessage(ctx.message.text);
+        await ctx.reply(response);
+      } catch (error) {
+        console.error('Error en handler de texto:', error);
+        await ctx.reply('Lo siento, hubo un error procesando tu mensaje.');
+      }
+    });
+
+    this.bot.on('voice', async (ctx) => {
+      try {
+        await ctx.reply('Procesando tu mensaje de voz...');
+        // Aquí iría la integración con Whisper o Gemini para transcripción
+        const transcript = "Funcionalidad de transcripción de voz en desarrollo.";
+        const response = await this.memoryEngine.processMessage(transcript);
+        await ctx.reply(response);
+      } catch (error) {
+        console.error('Error en handler de voz:', error);
+      }
+    });
+  }
+
+  async handleUpdate(update: any) {
+    return this.bot.handleUpdate(update);
+  }
+
+  async launch() {
+    if (config.webhookUrl) {
+      console.log(`Configurando webhook en: ${config.webhookUrl}`);
+      await this.bot.telegram.setWebhook(`${config.webhookUrl}/webhook/telegram`);
+    } else {
+      console.log('Iniciando bot en modo polling...');
+      this.bot.launch();
+    }
   }
 }

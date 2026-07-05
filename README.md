@@ -49,8 +49,7 @@ El **Memory Engine** es el corazón del sistema y se compone de los siguientes m
 
 ### Clasificador Automático de Memoria
 
-Para cada mensaje recibido, el sistema decide si debe convertirse en conocimiento permanente. Si la decisión es 
-YES, se genera o actualiza un archivo Markdown. Si es NO, se responde normalmente.
+Para cada mensaje recibido, el sistema decide si debe convertirse en conocimiento permanente. Si la decisión es YES, se genera o actualiza un archivo Markdown. Si es NO, se responde normalmente.
 
 ### Obsidian Vault
 
@@ -111,7 +110,7 @@ Voz → Speech to Text → Memory Engine → Gemini → Respuesta
 
 ## Configuración
 
-Todas las configuraciones se gestionan a través de variables de entorno.
+Todas las configuraciones se gestionan a través de variables de entorno. Se ha creado un archivo `.env.example` para facilitar la configuración inicial.
 
 ## Calidad del Código
 
@@ -137,3 +136,53 @@ El proveedor de LLM está abstraído, permitiendo cambiar entre Gemini (actual),
 -   Explicación de la arquitectura.
 -   Diagramas de secuencia.
 -   Código completo.
+
+## Estado Actual del Proyecto
+
+El proyecto **Brain** ha sido inicializado y se ha implementado el núcleo de la funcionalidad, incluyendo:
+
+-   **Arquitectura**: Definida y documentada con diagramas.
+-   **Estructura de Carpetas**: Creada y organizada.
+-   **Configuración**: Módulo de configuración basado en variables de entorno.
+-   **Tipos e Interfaces**: Definidos para una mayor claridad y robustez del código.
+-   **Abstracción de LLM**: Implementada la interfaz `BaseLLM` y el proveedor `GeminiProvider` con integración simulada.
+-   **Memoria Corta**: Implementada con SQLite.
+-   **Memoria Larga**: Implementada con gestión de Obsidian Vault en Markdown.
+-   **Motor de Búsqueda**: Implementación básica con similitud de coseno para embeddings.
+-   **Bot de Telegram**: Integración inicial con `telegraf` para manejo de texto y voz (con transcripción simulada).
+-   **API Express**: Servidor API para webhook de Telegram y health check.
+-   **Scripts**: `npm install`, `npm run build`, `npm run dev` y `npm run test-engine` disponibles.
+
+## Próximos Pasos (Validación y Estabilización del Núcleo)
+
+Para asegurar la funcionalidad y robustez del proyecto, se recomienda seguir los siguientes pasos:
+
+1.  **Revisar el Código Implementado**: Aunque se ha generado el proyecto, es crucial una revisión manual para asegurar que el código cumple con los requisitos y las mejores prácticas.
+2.  **Configurar el Archivo `.env`**: Crear un archivo `.env` basado en `.env.example` y rellenar con los tokens y claves de API (`TELEGRAM_TOKEN`, `GEMINI_API_KEY`).
+3.  **Crear la API Key de Gemini**: Obtener una clave de API válida para Google Gemini.
+4.  **Levantar el Proyecto Localmente**:
+    ```bash
+    npm install
+    npm run dev
+    ```
+5.  **Verificar Componentes Clave**:
+    -   **Telegram**: Asegurar que el bot responde a mensajes de texto y voz.
+    -   **Gemini**: Confirmar que la integración con la API de Gemini funciona correctamente para generación de respuestas, embeddings y clasificación.
+    -   **Obsidian**: Verificar que las notas se guardan y actualizan correctamente en el Vault.
+    -   **SQLite**: Comprobar que la memoria corta persiste y expira según lo configurado.
+    -   **Embeddings**: Validar que los embeddings se generan y utilizan para la búsqueda semántica.
+6.  **Publicar el Brain**: Una vez que el núcleo esté estable y funcionando localmente, proceder con el despliegue en un entorno 24/7.
+
+## Roadmap v2 (Funcionalidades Futuras)
+
+Una vez que la versión 1 sea estable, se pueden considerar las siguientes mejoras:
+
+-   **Memoria de Personas**: Recordar información específica sobre individuos (clientes, contactos, etc.).
+-   **Tareas Inteligentes**: Extracción automática de acciones pendientes de las conversaciones.
+-   **Recordatorios Proactivos**: Sugerencias basadas en el historial de decisiones y tareas.
+-   **Dashboard Web**: Interfaz web para explorar y gestionar el conocimiento almacenado.
+-   **Integración con CRM**: Conexión con sistemas CRM para enriquecer el contexto de las conversaciones.
+-   **Múltiples Proveedores de IA**: Soporte para cambiar entre diferentes LLMs (OpenAI, Claude, Grok) mediante configuración.
+-   **Búsqueda Híbrida**: Combinar búsqueda por embeddings y palabras clave para una recuperación de información más precisa.
+
+**Recomendación**: Es fundamental estabilizar el núcleo del proyecto ("hablar → guardar → recuperar → responder") antes de avanzar con funcionalidades adicionales. La fiabilidad de este ciclo es la base para todas las futuras mejoras.
