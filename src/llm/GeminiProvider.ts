@@ -12,7 +12,7 @@ export class GeminiProvider extends BaseLLM {
   }
 
   async generateResponse(messages: Message[], context?: string): Promise<LLMResponse> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     
     const systemPrompt = `Eres Brain, un sistema de memoria personal. 
     Tu conocimiento actual basado en memorias pasadas es:
@@ -45,7 +45,7 @@ export class GeminiProvider extends BaseLLM {
   }
 
   async classifyMemory(content: string): Promise<boolean> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     const prompt = `Analiza el siguiente mensaje y decide si contiene información importante que deba guardarse en la memoria a largo plazo (decisiones, ideas, aprendizajes, procesos, etc.). 
     Responde únicamente con la palabra "YES" o "NO".
     
