@@ -1,0 +1,48 @@
+direction: right
+
+Telegram: User
+Webhook: Server
+BrainAPI: Server
+MemoryEngine: Server
+ShortMemory: Database
+LongMemory: Filesystem
+SearchEngine: Server
+LLMProvider: External API
+GeminiAPI: External API
+
+User -> Webhook: Send Message (Text/Voice)
+Webhook -> BrainAPI: Forward Update
+
+BrainAPI -> MemoryEngine: processMessage(content)
+
+MemoryEngine -> SearchEngine: search(content)
+SearchEngine -> LLMProvider: generateEmbeddings(query)
+LLMProvider -> GeminiAPI: Request Embeddings
+GeminiAPI -> LLMProvider: Embeddings Vector
+LLMProvider -> SearchEngine: Embeddings Vector
+SearchEngine -> LongMemory: Retrieve relevant notes
+LongMemory -> SearchEngine: Relevant Notes
+SearchEngine -> MemoryEngine: Context (relevant notes summary)
+
+MemoryEngine -> ShortMemory: getRecentMessages()
+ShortMemory -> MemoryEngine: Conversation History
+
+MemoryEngine -> LLMProvider: generateResponse(history, context)
+LLMProvider -> GeminiAPI: Request Response
+GeminiAPI -> LLMProvider: Response
+LLMProvider -> MemoryEngine: LLM Response
+
+MemoryEngine -> ShortMemory: addMessage(userMsg)
+MemoryEngine -> ShortMemory: addMessage(assistantMsg)
+
+MemoryEngine -> LLMProvider: classifyMemory(content)
+LLMProvider -> GeminiAPI: Request Classification
+GeminiAPI -> LLMProvider: Classification (YES/NO)
+LLMProvider -> MemoryEngine: Classification Result
+
+MemoryEngine -> LongMemory: saveNote(folder, note) (if YES)
+
+MemoryEngine -> BrainAPI: Response Content
+BrainAPI -> Webhook: Response Content
+Webhook -> Telegram: Send Reply
+Telegram -> User: Display Reply
